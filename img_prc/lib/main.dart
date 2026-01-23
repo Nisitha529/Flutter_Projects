@@ -25,9 +25,11 @@ class _CameraScreenState extends State<CameraScreen> {
   late CameraController controller;
   CameraImage? img;
   bool isBusy = false;
-  String result = "";
+  String result = "Results will be shown";
 
   dynamic imageLabeler;
+  // dynamic barcodeScanner;
+
   @override
   void initState() {
     super.initState();
