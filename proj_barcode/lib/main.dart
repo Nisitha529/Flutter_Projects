@@ -4,8 +4,10 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_mlkit_barcode_scanning/google_mlkit_barcode_scanning.dart';
+import 'package:image_picker/image_picker.dart';
 
 late List<CameraDescription> _cameras;
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   _cameras = await availableCameras();
@@ -13,7 +15,7 @@ Future<void> main() async {
 }
 
 class CameraScreen extends StatefulWidget {
-  const CameraScreen({super.key});
+  const CameraScreen({Key? key}) : super(key: key);
 
   @override
   State<CameraScreen> createState() => _CameraScreenState();
@@ -25,15 +27,25 @@ class _CameraScreenState extends State<CameraScreen> {
   bool isBusy = false;
   String result = "Results will be shown.";
 
-  dynamic barcodeScanner;
+  // dynamic barcodeScanner;
+  late BarcodeScanner barcodeScanner;
+
+  late ImagePicker _imagePicker;
+  File? pickedImage;
+  bool useLiveCamera = true;
 
   @override
   void initState() {
     super.initState();
 
+    // Init Scanner
     final List<BarcodeFormat> formats = [BarcodeFormat.all];
     barcodeScanner = BarcodeScanner(formats: formats);
 
+    // Init Image Picker
+    _imagePicker = ImagePicker();
+
+    // Init Camera
     controller = CameraController(
       _cameras[0],
       ResolutionPreset.high,
@@ -42,6 +54,7 @@ class _CameraScreenState extends State<CameraScreen> {
                 .nv21 // for Android
           : ImageFormatGroup.bgra8888,
     );
+
     controller
         .initialize()
         .then((_) {
@@ -49,7 +62,7 @@ class _CameraScreenState extends State<CameraScreen> {
             return;
           }
           controller.startImageStream((image) {
-            if (!isBusy) {
+            if (useLiveCamera && !isBusy) {
               isBusy = true;
               img = image;
               doBarCodeScanning();
@@ -71,57 +84,82 @@ class _CameraScreenState extends State<CameraScreen> {
         });
   }
 
-  doBarCodeScanning() async {
-    result = "";
-    InputImage? inputImg = getInputImage();
+  // doBarCodeScanning() async {
+  //   result = "";
+  //   InputImage? inputImg = getInputImage();
+  //   final List<Barcode> barcodes = await barcodeScanner.processImage(inputImg);
+  //
+  //   for (Barcode barcode in barcodes) {
+  //     final BarcodeType type = barcode.type;
+  //     final Rect? boundingbox = barcode.boundingBox;
+  //     final String? displayValue = barcode.displayValue;
+  //     final String? rawValue = barcode.rawValue;
+  //
+  //     switch (type) {
+  //       case BarcodeType.wifi:
+  //         BarcodeWifi? barcodeWifi = barcode.value as BarcodeWifi?;
+  //         if (barcodeWifi != null) {
+  //           result = "WiFi : ${barcodeWifi.password!}";
+  //         }
+  //         break;
+  //
+  //       case BarcodeType.url:
+  //         BarcodeUrl? barcodeUrl = barcode.value as BarcodeUrl;
+  //
+  //         result = "URL : ${barcodeUrl.url!}";
+  //         break;
+  //
+  //       case BarcodeType.unknown:
+  //       // TODO: Handle this case.
+  //       case BarcodeType.contactInfo:
+  //       // TODO: Handle this case.
+  //       case BarcodeType.email:
+  //       // TODO: Handle this case.
+  //       case BarcodeType.isbn:
+  //       // TODO: Handle this case.
+  //       case BarcodeType.phone:
+  //       // TODO: Handle this case.
+  //       case BarcodeType.product:
+  //       // TODO: Handle this case.
+  //       case BarcodeType.sms:
+  //       // TODO: Handle this case.
+  //       case BarcodeType.text:
+  //       // TODO: Handle this case.
+  //       case BarcodeType.geoCoordinates:
+  //       // TODO: Handle this case.
+  //       case BarcodeType.calendarEvent:
+  //       // TODO: Handle this case.
+  //       case BarcodeType.driverLicense:
+  //       // TODO: Handle this case.
+  //     }
+  //   }
+  //   setState(() {
+  //     result;
+  //     isBusy = false;
+  //   });
+  // }
+
+  Future<void> doBarCodeScanning() async {
+    if (!useLiveCamera || img == null) {
+      isBusy = false;
+      return;
+    }
+
+    final inputImg = getInputImage();
+    if (inputImg == null) {
+      isBusy = false;
+      return;
+    }
+
     final List<Barcode> barcodes = await barcodeScanner.processImage(inputImg);
 
-    for (Barcode barcode in barcodes) {
-      final BarcodeType type = barcode.type;
-      final Rect? boundingbox = barcode.boundingBox;
-      final String? displayValue = barcode.displayValue;
-      final String? rawValue = barcode.rawValue;
+    for (final barcode in barcodes) {
+      final displayValue = barcode.displayValue ?? "Unknown";
 
-      switch (type) {
-        case BarcodeType.wifi:
-          BarcodeWifi? barcodeWifi = barcode.value as BarcodeWifi?;
-          if (barcodeWifi != null) {
-            result = "WiFi : ${barcodeWifi.password!}";
-          }
-          break;
-
-        case BarcodeType.url:
-          BarcodeUrl? barcodeUrl = barcode.value as BarcodeUrl;
-
-          result = "URL : ${barcodeUrl.url!}";
-          break;
-
-        case BarcodeType.unknown:
-        // TODO: Handle this case.
-        case BarcodeType.contactInfo:
-        // TODO: Handle this case.
-        case BarcodeType.email:
-        // TODO: Handle this case.
-        case BarcodeType.isbn:
-        // TODO: Handle this case.
-        case BarcodeType.phone:
-        // TODO: Handle this case.
-        case BarcodeType.product:
-        // TODO: Handle this case.
-        case BarcodeType.sms:
-        // TODO: Handle this case.
-        case BarcodeType.text:
-        // TODO: Handle this case.
-        case BarcodeType.geoCoordinates:
-        // TODO: Handle this case.
-        case BarcodeType.calendarEvent:
-        // TODO: Handle this case.
-        case BarcodeType.driverLicense:
-        // TODO: Handle this case.
-      }
+      result = displayValue;
     }
+
     setState(() {
-      result;
       isBusy = false;
     });
   }
@@ -134,7 +172,9 @@ class _CameraScreenState extends State<CameraScreen> {
   };
 
   InputImage? getInputImage() {
-    final camera = _cameras[1];
+    if (img == null) return null;
+
+    final camera = _cameras[0];
     final sensorOrientation = camera.sensorOrientation;
 
     InputImageRotation? rotation;
@@ -155,6 +195,8 @@ class _CameraScreenState extends State<CameraScreen> {
       }
 
       rotation = InputImageRotationValue.fromRawValue(rotationCompensation);
+    } else {
+      rotation = InputImageRotationValue.fromRawValue(sensorOrientation);
     }
 
     if (rotation == null) return null;
@@ -182,35 +224,111 @@ class _CameraScreenState extends State<CameraScreen> {
     );
   }
 
+  Future <void> pickFromCamera() async {
+    final XFile? file = await _imagePicker.pickImage(source: ImageSource.camera);
+
+    if (file ==null) return;
+
+    pickedImage = File(file.path);
+    useLiveCamera = false;
+    await scanImageFile(pickedImage!);
+  }
+
+  Future <void> pickFromGallery() async {
+    final XFile? file = await _imagePicker.pickImage(source: ImageSource.gallery);
+
+    if (file == null) return;
+
+    pickedImage = File(file.path);
+    useLiveCamera = false;
+    await scanImageFile(pickedImage!);
+  }
+
+  Future <void> scanImageFile (File image) async {
+    result = "";
+
+    final inputImage = InputImage.fromFile(image);
+    final List<Barcode> barcodes = await barcodeScanner.processImage(inputImage);
+
+    for (final barcode in barcodes) {
+      result = barcode.displayValue ?? "No Value found";
+    }
+
+    setState(() {   });
+  }
+
   @override
   void dispose() {
     controller.dispose();
+    barcodeScanner.close();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!controller.value.isInitialized) {
-      return Container();
-    }
+    if (!controller.value.isInitialized) return const SizedBox();
 
     return MaterialApp(
-      home: Stack(
-        fit: StackFit.expand,
-        children: [
-          CameraPreview(controller),
-          Container(
-            margin: const EdgeInsets.only(left: 10, bottom: 10),
+      home: Scaffold(
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Preview
+            useLiveCamera
+                ? CameraPreview(controller)
+                : pickedImage != null
+                ? Image.file(pickedImage!, fit: BoxFit.cover)
+                : Container(),
 
-            child: Align(
-              alignment: Alignment.bottomLeft,
+            // Result
+            Positioned(
+              bottom: 120,
+              left: 10,
+              right: 10,
               child: Text(
                 result,
-                style: const TextStyle(color: Colors.white, fontSize: 25),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  backgroundColor: Colors.black54,
+                ),
+                textAlign: TextAlign.center,
               ),
             ),
-          ),
-        ],
+
+            // Buttons
+            Positioned(
+              bottom: 20,
+              left: 20,
+              right: 20,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  FloatingActionButton(
+                    heroTag: "gallery",
+                    onPressed: pickFromGallery,
+                    child: const Icon(Icons.photo),
+                  ),
+                  FloatingActionButton(
+                    heroTag: "camera",
+                    onPressed: pickFromCamera,
+                    child: const Icon(Icons.camera_alt),
+                  ),
+                  FloatingActionButton(
+                    heroTag: "live",
+                    onPressed: () {
+                      setState(() {
+                        useLiveCamera = true;
+                        result = "";
+                      });
+                    },
+                    child: const Icon(Icons.videocam),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
