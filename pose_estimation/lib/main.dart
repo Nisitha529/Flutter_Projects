@@ -1,122 +1,241 @@
+import 'dart:io';
+import 'dart:math';
+import 'dart:ui';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  // This widget is the root of your application.
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
-    );
-  }
+  runApp(MyHomePage());
 }
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
-
+  MyHomePage({Key? key}) : super(key: key);
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  _MyHomePageState createState() => _MyHomePageState();
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+  late ImagePicker imagePicker;
+  File? _image;
+  String result = '';
+  // var image;
+  // late List<Pose> poses;
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
+  //TODO declare detector
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    imagePicker = ImagePicker();
+    //TODO initialize detector
+
   }
 
   @override
+  void dispose() {
+    super.dispose();
+
+  }
+
+  //TODO capture image using camera
+  _imgFromCamera() async {
+    XFile? pickedFile = await imagePicker.pickImage(source: ImageSource.camera);
+    if (pickedFile != null) {
+      _image = File(pickedFile.path);
+      doPoseDetection();
+    }
+  }
+
+  //TODO choose image using gallery
+  _imgFromGallery() async {
+    XFile? pickedFile =
+    await imagePicker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      _image = File(pickedFile.path);
+      doPoseDetection();
+    }
+  }
+
+  //TODO pose detection code here
+  doPoseDetection() async {
+    setState(() {
+      _image;
+    });
+  }
+
+  // //TODO draw pose
+  // drawPose() async {
+  //   image = await _image?.readAsBytes();
+  //   image = await decodeImageFromList(image);
+  //   setState(() {
+  //     image;
+  //     poses;
+  //     result;
+  //   });
+  // }
+
+  @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+    // TODO: implement build
+    return MaterialApp(
+      home: Scaffold(
+          body: Container(
+            decoration: const BoxDecoration(
+              image: DecorationImage(
+                  image: AssetImage('images/bg.jpg'), fit: BoxFit.cover),
             ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+            child: Column(
+              children: [
+                const SizedBox(
+                  width: 100,
+                ),
+                Container(
+                  margin: const EdgeInsets.only(top: 100),
+                  child: Stack(children: <Widget>[
+                    Center(
+                      child: ElevatedButton(
+                        onPressed: _imgFromGallery,
+                        onLongPress: _imgFromCamera,
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent),
+                        child: Container(
+                          margin: const EdgeInsets.only(top: 8),
+                          child: _image != null
+                              ? Image.file(
+                            _image!,
+                            width: 350,
+                            height: 350,
+                            fit: BoxFit.fill,
+                          )
+                              : Container(
+                            width: 350,
+                            height: 350,
+                            color: Colors.indigo,
+                            child: const Icon(
+                              Icons.camera_alt,
+                              color: Colors.white,
+                              size: 100,
+                            ),
+                          ),
+                        ),
+                        // Container(
+                        //   child: image != null
+                        //       ? Center(
+                        //           child: FittedBox(
+                        //             child: SizedBox(
+                        //               width: image.width.toDouble(),
+                        //               height: image.height.toDouble(),
+                        //               child: CustomPaint(
+                        //                 painter: PosePainter(poses,image),
+                        //               ),
+                        //             ),
+                        //           ),
+                        //         )
+                        //       : Container(
+                        //           color: Colors.indigo,
+                        //           width: 350,
+                        //           height: 350,
+                        //           child: const Icon(
+                        //             Icons.camera_alt,
+                        //             color: Colors.white,
+                        //             size: 53,
+                        //           ),
+                        //         ),
+                        // ),
+                      ),
+                    ),
+                  ]),
+                ),
+              ],
+            ),
+          )),
     );
   }
 }
+
+// class PosePainter extends CustomPainter {
+//   PosePainter(this.poses, this.imageFile);
+//
+//   final List<Pose> poses;
+//   var imageFile;
+//
+//
+//   @override
+//   void paint(Canvas canvas, Size size) {
+//     if (imageFile != null) {
+//       canvas.drawImage(imageFile, Offset.zero, Paint());
+//     }
+//     final paint = Paint()
+//       ..style = PaintingStyle.stroke
+//       ..strokeWidth = 4.0
+//       ..color = Colors.green;
+//
+//     final leftPaint = Paint()
+//       ..style = PaintingStyle.stroke
+//       ..strokeWidth = 3.0
+//       ..color = Colors.yellow;
+//
+//     final rightPaint = Paint()
+//       ..style = PaintingStyle.stroke
+//       ..strokeWidth = 3.0
+//       ..color = Colors.blueAccent;
+//
+//     for (final pose in poses)
+//     {
+//       pose.landmarks.forEach((_, landmark) {
+//         canvas.drawCircle(
+//             Offset(
+//               landmark.x,
+//               landmark.y
+//             ),
+//             1,
+//             paint);
+//       });
+//
+//       // void paintLine(
+//       //     PoseLandmarkType type1, PoseLandmarkType type2, Paint paintType) {
+//       //   final PoseLandmark joint1 = pose.landmarks[type1]!;
+//       //   final PoseLandmark joint2 = pose.landmarks[type2]!;
+//       //   canvas.drawLine(
+//       //       Offset(joint1.x,
+//       //           joint1.y),
+//       //       Offset(joint2.x,
+//       //           joint2.y),
+//       //       paintType);
+//       // }
+//       //
+//       // //Draw arms
+//       // paintLine(
+//       //     PoseLandmarkType.leftShoulder, PoseLandmarkType.leftElbow, leftPaint);
+//       // paintLine(
+//       //     PoseLandmarkType.leftElbow, PoseLandmarkType.leftWrist, leftPaint);
+//       // paintLine(PoseLandmarkType.rightShoulder, PoseLandmarkType.rightElbow,
+//       //     rightPaint);
+//       // paintLine(
+//       //     PoseLandmarkType.rightElbow, PoseLandmarkType.rightWrist, rightPaint);
+//       //
+//       // //Draw Body
+//       // paintLine(
+//       //     PoseLandmarkType.leftShoulder, PoseLandmarkType.leftHip, leftPaint);
+//       // paintLine(PoseLandmarkType.rightShoulder, PoseLandmarkType.rightHip,
+//       //     rightPaint);
+//       //
+//       // //Draw legs
+//       // paintLine(PoseLandmarkType.leftHip, PoseLandmarkType.leftKnee, leftPaint);
+//       // paintLine(
+//       //     PoseLandmarkType.leftKnee, PoseLandmarkType.leftAnkle, leftPaint);
+//       // paintLine(
+//       //     PoseLandmarkType.rightHip, PoseLandmarkType.rightKnee, rightPaint);
+//       // paintLine(
+//       //     PoseLandmarkType.rightKnee, PoseLandmarkType.rightAnkle, rightPaint);
+//     }
+//   }
+//
+//   @override
+//   bool shouldRepaint(covariant PosePainter oldDelegate) {
+//     return oldDelegate.poses != poses;
+//   }
+// }
