@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.example.prj_pose_estimation"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 35 //flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -24,8 +24,8 @@ android {
         applicationId = "com.example.prj_pose_estimation"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        minSdk = flutter.minSdkVersion //flutter.minSdkVersion
+        targetSdk = 35 // flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
