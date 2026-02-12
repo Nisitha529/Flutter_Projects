@@ -1,6 +1,6 @@
 import 'dart:io';
-import 'dart:math';
 import 'dart:ui';
+import 'package:camera/camera.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_object_detection/google_mlkit_object_detection.dart';
@@ -9,12 +9,28 @@ import 'package:flutter/services.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 
-void main() {
-  runApp(MyHomePage());
+late List<CameraDescription> cameras;
+
+Future<void>  main() async{
+  WidgetsFlutterBinding.ensureInitialized();
+  cameras = await availableCameras();
+  runApp(MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build (BuildContext context) {
+    return MaterialApp(
+      home : MyHomePage(
+        title : 'screen'
+      )
+    );
+  }
 }
 
 class MyHomePage extends StatefulWidget {
-  MyHomePage({Key? key}) : super(key: key);
+  MyHomePage({Key? key, required this.title}) : super(key: key);
+  final String title;
   @override
   _MyHomePageState createState() => _MyHomePageState();
 }
@@ -28,6 +44,10 @@ class _MyHomePageState extends State<MyHomePage> {
   late List<DetectedObject> objects;
 
   dynamic objectDetector;
+  dynamic controller;
+
+  bool isBusy = false;
+  late Size size;
 
   @override
   void initState() {
