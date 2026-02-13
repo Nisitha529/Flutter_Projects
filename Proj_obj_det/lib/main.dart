@@ -1,231 +1,433 @@
 import 'dart:io';
 import 'dart:ui';
+import 'dart:ui' as ui;
 import 'package:camera/camera.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_object_detection/google_mlkit_object_detection.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/services.dart';
-import 'package:path/path.dart';
-import 'package:path_provider/path_provider.dart';
 
 late List<CameraDescription> cameras;
 
-Future<void>  main() async{
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   cameras = await availableCameras();
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  @override
-  Widget build (BuildContext context) {
-    return MaterialApp(
-      home : MyHomePage(
-        title : 'screen'
-      )
-    );
-  }
-}
-
-class MyHomePage extends StatefulWidget {
-  MyHomePage({Key? key, required this.title}) : super(key: key);
-  final String title;
-  @override
-  _MyHomePageState createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  late ImagePicker imagePicker;
-  File? _image;
-  String result = '';
-
-  var image;
-  late List<DetectedObject> objects;
-
-  dynamic objectDetector;
-  dynamic controller;
-
-  bool isBusy = false;
-  late Size size;
-
-  @override
-  void initState() {
-    super.initState();
-    imagePicker = ImagePicker();
-
-    createObjectDetector();
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-    objectDetector.close();
-  }
-
-  _imgFromCamera() async {
-    XFile? pickedFile = await imagePicker.pickImage(source: ImageSource.camera);
-
-    if (pickedFile != null) {
-      _image = File(pickedFile.path);
-      doObjectDetection();
-    }
-  }
-
-  _imgFromGallery() async {
-    XFile? pickedFile = await imagePicker.pickImage(
-      source: ImageSource.gallery,
-    );
-
-    if (pickedFile != null) {
-      _image = File(pickedFile.path);
-      doObjectDetection();
-    }
-  }
-
-  createObjectDetector() async {
-    final options = ObjectDetectorOptions(
-      classifyObjects: true,
-      multipleObjects: true,
-      mode: DetectionMode.single,
-    );
-    objectDetector = ObjectDetector(options: options);
-  }
-
-  doObjectDetection() async {
-    result = "";
-    final inputImage = InputImage.fromFile(_image!);
-    objects = await objectDetector.processImage(inputImage);
-    drawRectanglesAroundObjects();
-  }
-
-  drawRectanglesAroundObjects() async {
-    image = await _image?.readAsBytes();
-    image = await decodeImageFromList(image);
-
-    setState(() {
-      image;
-      objects;
-      result;
-    });
-  }
+  const MyApp({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: Scaffold(
-        body: Container(
-          decoration: const BoxDecoration(
-            image: DecorationImage(
-              image: AssetImage('images/bg.jpg'),
-              fit: BoxFit.cover,
+      title: 'Object Detection Demo',
+      theme: ThemeData(primarySwatch: Colors.pink),
+      home: const HomeScreen(),
+    );
+  }
+}
+
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Object Detection')),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LiveDetectionScreen()),
+                );
+              },
+              child: const Text('Real‑time Detection'),
             ),
-          ),
-          child: Column(
-            children: [
-              const SizedBox(width: 100),
-              Container(
-                margin: const EdgeInsets.only(top: 100),
-                child: Stack(
-                  children: <Widget>[
-                    Center(
-                      child: ElevatedButton(
-                        onPressed: _imgFromGallery,
-                        onLongPress: _imgFromCamera,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.transparent,
-                          shadowColor: Colors.transparent,
-                        ),
-                        child: Container(
-                          width: 350,
-                          height: 350,
-                          margin: const EdgeInsets.only(top: 45),
-                          child: image != null
-                              ? Center(
-                                  child: FittedBox(
-                                    child: SizedBox(
-                                      width: image.width.toDouble(),
-                                      height: image.width.toDouble(),
-                                      child: CustomPaint(
-                                        painter: ObjectPainter(
-                                          objectList: objects,
-                                          imageFile: image,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                )
-                              : Container(
-                                  color: Colors.pinkAccent,
-                                  width: 350,
-                                  height: 350,
-                                  child: const Icon(
-                                    Icons.camera_alt,
-                                    color: Colors.black,
-                                    size: 53,
-                                  ),
-                                ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                margin: const EdgeInsets.only(top: 20),
-                child: Text(
-                  result,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontFamily: 'finger_paint',
-                    fontSize: 36,
-                    color: Colors.red,
-                  ),
-                ),
-              ),
-            ],
-          ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const StaticDetectionScreen()),
+                );
+              },
+              child: const Text('Single Image Detection'),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class ObjectPainter extends CustomPainter {
-  List < DetectedObject> objectList;
-  dynamic imageFile;
-  ObjectPainter({required this.objectList, @required this.imageFile});
+class LiveDetectionScreen extends StatefulWidget {
+  const LiveDetectionScreen({Key? key}) : super(key: key);
 
   @override
-  void paint (Canvas canvas, Size size) {
-    if (imageFile != null) {
-      canvas.drawImage(imageFile, Offset.zero, Paint());
+  State<LiveDetectionScreen> createState() => _LiveDetectionScreenState();
+}
+
+class _LiveDetectionScreenState extends State<LiveDetectionScreen> {
+  CameraController? _controller;
+  bool _isBusy = false;
+  ObjectDetector? _objectDetector;
+  List<DetectedObject> _scanResults = [];
+  CameraImage? _latestImage;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeCamera();
+  }
+
+  Future<void> _initializeCamera() async {
+    final options = ObjectDetectorOptions(
+      mode: DetectionMode.stream,
+      classifyObjects: true,
+      multipleObjects: true,
+    );
+    _objectDetector = ObjectDetector(options: options);
+
+    _controller = CameraController(
+      cameras[0],
+      ResolutionPreset.high,
+      imageFormatGroup:
+      Platform.isAndroid ? ImageFormatGroup.nv21 : ImageFormatGroup.bgra8888,
+    );
+
+    await _controller!.initialize();
+    if (!mounted) return;
+
+    _controller!.startImageStream((image) {
+      if (!_isBusy) {
+        _isBusy = true;
+        _latestImage = image;
+        _detectObjectsOnFrame();
+      }
+    });
+
+    setState(() {});
+  }
+
+  Future<void> _detectObjectsOnFrame() async {
+    final inputImage = _inputImageFromCamera();
+    if (inputImage == null) {
+      _isBusy = false;
+      return;
     }
 
-    Paint p = Paint();
-    p.color = Colors.red;
-    p.style = PaintingStyle.stroke;
-    p.strokeWidth = 4;
+    final objects = await _objectDetector!.processImage(inputImage);
+    setState(() {
+      _scanResults = objects;
+    });
+    _isBusy = false;
+  }
 
-    for (DetectedObject rectangle in objectList) {
-      canvas.drawRect(rectangle.boundingBox, p);
-      var list = rectangle.labels;
-      for (Label label in list) {
-        print("${label.text} ${label.confidence.toStringAsFixed(2)}");
-        TextSpan span = TextSpan(text: label.text, style: const TextStyle(fontSize: 25, color: Colors.blue));
-        TextPainter tp = TextPainter(text: span, textAlign: TextAlign.left, textDirection: TextDirection.ltr);
+  final _orientations = {
+    DeviceOrientation.portraitUp: 0,
+    DeviceOrientation.landscapeLeft: 90,
+    DeviceOrientation.portraitDown: 180,
+    DeviceOrientation.landscapeRight: 270,
+  };
 
+  InputImage? _inputImageFromCamera() {
+    if (_latestImage == null) return null;
+
+    final camera = cameras[0];
+    final sensorOrientation = camera.sensorOrientation;
+    InputImageRotation? rotation;
+
+    if (Platform.isIOS) {
+      rotation = InputImageRotationValue.fromRawValue(sensorOrientation);
+    } else if (Platform.isAndroid) {
+      var rotationCompensation =
+      _orientations[_controller!.value.deviceOrientation];
+      if (rotationCompensation == null) return null;
+      if (camera.lensDirection == CameraLensDirection.front) {
+        rotationCompensation = (sensorOrientation + rotationCompensation) % 360;
+      } else {
+        rotationCompensation =
+            (sensorOrientation - rotationCompensation + 360) % 360;
+      }
+      rotation = InputImageRotationValue.fromRawValue(rotationCompensation);
+    }
+    if (rotation == null) return null;
+
+    final format = InputImageFormatValue.fromRawValue(_latestImage!.format.raw);
+    if (format == null ||
+        (Platform.isAndroid && format != InputImageFormat.nv21) ||
+        (Platform.isIOS && format != InputImageFormat.bgra8888)) return null;
+
+    if (_latestImage!.planes.length != 1) return null;
+    final plane = _latestImage!.planes.first;
+
+    return InputImage.fromBytes(
+      bytes: plane.bytes,
+      metadata: InputImageMetadata(
+        size: Size(_latestImage!.width.toDouble(), _latestImage!.height.toDouble()),
+        rotation: rotation,
+        format: format,
+        bytesPerRow: plane.bytesPerRow,
+      ),
+    );
+  }
+
+  Widget _buildResults() {
+    if (_scanResults.isEmpty || _controller == null || !_controller!.value.isInitialized) {
+      return const SizedBox.shrink();
+    }
+
+    final Size imageSize = Size(
+      _controller!.value.previewSize!.height,
+      _controller!.value.previewSize!.width,
+    );
+    return CustomPaint(
+      painter: LiveObjectPainter(imageSize, _scanResults),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller?.stopImageStream();
+    _controller?.dispose();
+    _objectDetector?.close();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Real‑time Detection')),
+      body: _controller == null || !_controller!.value.isInitialized
+          ? const Center(child: CircularProgressIndicator())
+          : Stack(
+        children: [
+          Positioned.fill(
+            child: AspectRatio(
+              aspectRatio: _controller!.value.aspectRatio,
+              child: CameraPreview(_controller!),
+            ),
+          ),
+          Positioned.fill(child: _buildResults()),
+        ],
+      ),
+    );
+  }
+}
+
+class LiveObjectPainter extends CustomPainter {
+  final Size absoluteImageSize;
+  final List<DetectedObject> objects;
+
+  LiveObjectPainter(this.absoluteImageSize, this.objects);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final scaleX = size.width / absoluteImageSize.width;
+    final scaleY = size.height / absoluteImageSize.height;
+
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0
+      ..color = Colors.pinkAccent;
+
+    for (final obj in objects) {
+      final rect = Rect.fromLTRB(
+        obj.boundingBox.left * scaleX,
+        obj.boundingBox.top * scaleY,
+        obj.boundingBox.right * scaleX,
+        obj.boundingBox.bottom * scaleY,
+      );
+      canvas.drawRect(rect, paint);
+
+      if (obj.labels.isNotEmpty) {
+        final label = obj.labels.first;
+        final span = TextSpan(
+          text: '${label.text} (${label.confidence.toStringAsFixed(2)})',
+          style: const TextStyle(fontSize: 14, color: Colors.blue),
+        );
+        final tp = TextPainter(
+          text: span,
+          textAlign: TextAlign.left,
+          textDirection: TextDirection.ltr,
+        );
         tp.layout();
-        tp.paint(canvas, Offset(rectangle.boundingBox.left, rectangle.boundingBox.top));
-
-        break;
+        tp.paint(canvas, Offset(rect.left, rect.top - tp.height));
       }
     }
-
   }
 
   @override
-  bool shouldRepaint(CustomPainter oldDelegate) {
-    return true;
+  bool shouldRepaint(LiveObjectPainter oldDelegate) =>
+      oldDelegate.absoluteImageSize != absoluteImageSize ||
+          oldDelegate.objects != objects;
+}
+
+class StaticDetectionScreen extends StatefulWidget {
+  const StaticDetectionScreen({Key? key}) : super(key: key);
+
+  @override
+  State<StaticDetectionScreen> createState() => _StaticDetectionScreenState();
+}
+
+class _StaticDetectionScreenState extends State<StaticDetectionScreen> {
+  final ImagePicker _picker = ImagePicker();
+  File? _imageFile;
+  ui.Image? _decodedImage;
+  List<DetectedObject> _objects = [];
+  ObjectDetector? _objectDetector;
+
+  @override
+  void initState() {
+    super.initState();
+    _initDetector();
   }
+
+  Future<void> _initDetector() async {
+    final options = ObjectDetectorOptions(
+      mode: DetectionMode.single, // optimized for single image
+      classifyObjects: true,
+      multipleObjects: true,
+    );
+    _objectDetector = ObjectDetector(options: options);
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    final pickedFile = await _picker.pickImage(source: source);
+    if (pickedFile != null) {
+      setState(() {
+        _imageFile = File(pickedFile.path);
+        _objects = [];
+        _decodedImage = null;
+      });
+      _detectObjects();
+    }
+  }
+
+  Future<void> _detectObjects() async {
+    if (_imageFile == null || _objectDetector == null) return;
+
+    final inputImage = InputImage.fromFile(_imageFile!);
+    final objects = await _objectDetector!.processImage(inputImage);
+    final bytes = await _imageFile!.readAsBytes();
+    final codec = await ui.instantiateImageCodec(bytes);
+    final frame = await codec.getNextFrame();
+    final image = frame.image;
+
+    setState(() {
+      _objects = objects;
+      _decodedImage = image;
+    });
+  }
+
+  @override
+  void dispose() {
+    _objectDetector?.close();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Single Image Detection')),
+      body: Container(
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('images/bg.jpg'), // optional background
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: Column(
+          children: [
+            const SizedBox(height: 50),
+            Expanded(
+              child: Center(
+                child: GestureDetector(
+                  onTap: () => _pickImage(ImageSource.gallery),
+                  onLongPress: () => _pickImage(ImageSource.camera),
+                  child: Container(
+                    width: 350,
+                    height: 350,
+                    color: _decodedImage == null ? Colors.pinkAccent : null,
+                    child: _decodedImage != null
+                        ? FittedBox(
+                      child: SizedBox(
+                        width: _decodedImage!.width.toDouble(),
+                        height: _decodedImage!.height.toDouble(),
+                        child: CustomPaint(
+                          painter: StaticObjectPainter(
+                            image: _decodedImage!,
+                            objects: _objects,
+                          ),
+                        ),
+                      ),
+                    )
+                        : const Icon(Icons.camera_alt, size: 53, color: Colors.black),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            // You can show detection results summary here
+            Container(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                _objects.isEmpty
+                    ? 'Tap to select an image'
+                    : '${_objects.length} object(s) detected',
+                style: const TextStyle(fontSize: 20, color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class StaticObjectPainter extends CustomPainter {
+  final ui.Image image;
+  final List<DetectedObject> objects;
+
+  StaticObjectPainter({required this.image, required this.objects});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawImage(image, Offset.zero, Paint());
+
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4
+      ..color = Colors.red;
+
+    for (final obj in objects) {
+      canvas.drawRect(obj.boundingBox, paint);
+
+      if (obj.labels.isNotEmpty) {
+        final label = obj.labels.first;
+        final span = TextSpan(
+          text: '${label.text} (${label.confidence.toStringAsFixed(2)})',
+          style: const TextStyle(fontSize: 18, color: Colors.blue),
+        );
+        final tp = TextPainter(
+          text: span,
+          textAlign: TextAlign.left,
+          textDirection: TextDirection.ltr,
+        );
+        tp.layout();
+        tp.paint(canvas, Offset(obj.boundingBox.left, obj.boundingBox.top - tp.height));
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(StaticObjectPainter oldDelegate) =>
+      oldDelegate.image != image || oldDelegate.objects != objects;
 }
